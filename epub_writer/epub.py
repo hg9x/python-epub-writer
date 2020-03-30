@@ -22,3 +22,17 @@ class EPuB:
 
     def compile(self, tmp_dir, output_dir):
         pass
+
+class Image:
+    '''
+    Represents an image in HTML content
+
+    Needs to a do a few things:
+    * Keep track of the URL (if it is a URL), so it can be downloaded later
+    * Download that image (or copy, if it is a filesys path)
+    * Creates a UUID that is used as the file name
+    * Return the new <img> tag
+    '''
+
+    def __init__(self, URL):
+        pass
