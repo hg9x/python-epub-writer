@@ -1,7 +1,11 @@
 from bs4 import BeautifulSoup
 from uuid import uuid4
+from pathlib import Path
+import shutil
 from epub_writer import TEMPLATES as t
-
+import aiofiles
+import aiohttp
+import asyncio
 
 class EPuB:
     '''
@@ -50,8 +54,30 @@ class EPuB:
             chapter = Chapter(html_string)
             self.chapters.append(chapter)
 
-    def compile(self, tmp_dir, output_dir):
+        
+    #TODO: Error checking for both
+    async def write_chapters(self, tmp_dir):
+        for chapter in self.chapters:
+            full_dir = tmp_dir / chapter.filepath()
+            async with aiofiles.open(str(full_dir), 'w') as f:
+                await f.write(chapter.HTML)
+    
+    async def write_images(self, tmp_dir):
+        async with aiohttp.ClientSession() as session:
+            for image in self.images:
+                full_dir = tmp_dir / image.filepath()
+                async with session.get(image.src) as resp:
+                    if resp.status == 200:
+                        async with aiofiles.open(str(full_dir), 'wb') as f:
+                            await f.write(await resp.read())
+    
+    async def async_compile(self, tmp_dir, output_dir):
         pass
+
+    def compile(self, tmp_dir, output_dir):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(self.write_chapters(tmp_dir))
 
 class Chapter:
     '''
@@ -65,8 +91,8 @@ class Chapter:
         self.UUID = str(uuid4())
     
     def filepath(self):
-        return f'../'
-    
+        return Path('OEBPS/Text') / Path(f'{self.UUID}.xhtml')
+
     def __str__(self):
         return f'...{self.HTML[:20]}... | {self.UUID}'
     
@@ -90,6 +116,9 @@ class Image:
 
     def new_src(self):
         return f'../Images/{self.UUID}.png'
+    
+    def filepath(self):
+        return Path('OEBPS/Images') / Path(f'{self.UUID}.png')
     
     def __str__(self):
         return f'{self.new_src()} | {self.src}'
