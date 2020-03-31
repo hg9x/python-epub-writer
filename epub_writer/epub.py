@@ -3,9 +3,13 @@ from uuid import uuid4
 from pathlib import Path
 import shutil
 from epub_writer import TEMPLATES as t
+import shutil
 import aiofiles
 import aiohttp
 import asyncio
+import os
+import zipfile
+import base64
 
 class EPuB:
     '''
@@ -34,6 +38,12 @@ class EPuB:
         self.author = metadata.get('author', '')
         self.publisher = metadata.get('publisher', '')
         self.cover = metadata.get('cover', '')
+        self.filename = metadata.get('filename', '')
+        if not self.filename:
+            self.filename = self.title
+            if not self.title:
+                self.filename = "untitled"
+        self.UUID = str(uuid4())
 
 
         self.images = []
@@ -51,7 +61,7 @@ class EPuB:
             #then we just stick it in the mako template
             html_string = t.PAGE.render(title=item.get('title', ''), body=soup.prettify()) 
 
-            chapter = Chapter(html_string)
+            chapter = Chapter(html_string, item.get('title', ''))
             self.chapters.append(chapter)
 
         
@@ -72,23 +82,115 @@ class EPuB:
                             await f.write(await resp.read())
     
     async def async_compile(self, tmp_dir, output_dir):
-        pass
+        #first, make the file structure for the temp directory
+        full_dir = tmp_dir / 'tmp'
+        if full_dir.exists():
+            if full_dir.is_dir():
+                shutil.rmtree(str(full_dir))
+        full_dir.mkdir(parents=True)
+        
+        #EPuBs have the following structure
+        #Root
+        # mimetype
+        # -> OEBPS
+        #   -> Text
+        #   -> Images
+        #   -> content.opf
+        #   -> toc.ncx
+        # -> META-INF
+        #   -> container.xml
+
+        OEBPS = (full_dir / 'OEBPS')
+        META = (full_dir / 'META-INF')
+        
+        TEXT = (OEBPS / 'Text')
+        IMAGES = (OEBPS / 'Images')
+
+        OEBPS.mkdir()
+        META.mkdir()
+
+        TEXT.mkdir()
+        IMAGES.mkdir()
+
+        #with the cool folders and shit, we can now start writing files
+
+        #MIMETYPE
+        with open(str(full_dir / 'mimetype'), 'w') as f:
+            f.write(t.MIMETYPE)
+
+        #content.opf
+        with open(str(OEBPS / 'content.opf'), 'w') as f:
+            f.write(t.CONTENT_OPF.render(
+                title=self.title,
+                author=self.author,
+                UUID=self.UUID,
+                epub_elements=self.chapters + self.images,
+                chapters=self.chapters
+            ))
+
+        with open(str(OEBPS / 'toc.ncx'), 'w') as f:
+            f.write(t.TOC.render(
+                UUID=self.UUID,
+                title=self.title,
+                chapters=self.chapters
+            ))
+
+        with open(str(META / 'container.xml'), 'w') as f:
+            f.write(t.CONTAINER)
+        
+        with open(str(TEXT / 'cover.xhtml'), 'w') as f:
+            f.write(t.COVER)
+
+        #is there a cover? In that case, we make a special Image object for it
+        if self.cover:
+            cover_image = Image(self.cover)
+            cover_image.UUID = 'Cover'
+
+            self.images.append(cover_image)
+        else:
+            with open(str(IMAGES / 'Cover.png'), 'wb') as f:
+                cover = base64.b64decode(t.DEFAULT_COVER_IMAGE)
+                f.write(cover)
+
+        #chapter xhtml files
+        await self.write_chapters(full_dir)
+
+        await self.write_images(full_dir) 
+
+        result_file = output_dir / (self.filename + '.epub')
+
+        shutil.make_archive(str(result_file), 'zip', str(full_dir))
+        os.rename(str(result_file) + '.zip', str(result_file))
+
+        shutil.rmtree(full_dir)
+        
+
 
     def compile(self, tmp_dir, output_dir):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(self.write_chapters(tmp_dir))
+        asyncio.run(self.async_compile(tmp_dir, output_dir))
 
-class Chapter:
+class EPuBItem:
+
+    def __init__(self, id, href, media):
+        self.id = id
+        self.href = href
+        self.media = media
+
+class Chapter(EPuBItem):
     '''
     Represents a chapter in the epub
     Has an HTML string, and a UUID
     UUID represents final path
     '''
 
-    def __init__(self, HTML):
+    def __init__(self, HTML, title = ''):
         self.HTML = HTML
         self.UUID = str(uuid4())
+        self.title = title
+        super().__init__(self.UUID, f'Text/{self.UUID}.xhtml', 'application/xhtml+xml')
+    
+    def new_src(self):
+        return f'../Text/{self.UUID}.xhtml'
     
     def filepath(self):
         return Path('OEBPS/Text') / Path(f'{self.UUID}.xhtml')
@@ -99,7 +201,7 @@ class Chapter:
     def __repr__(self):
         return str(self)
 
-class Image:
+class Image(EPuBItem):
     '''
     Represents an image in HTML content
 
@@ -113,6 +215,7 @@ class Image:
     def __init__(self, URL):
         self.src = URL
         self.UUID = str(uuid4())
+        super().__init__(self.UUID, f'Images/{self.UUID}.png', 'image/png')
 
     def new_src(self):
         return f'../Images/{self.UUID}.png'
