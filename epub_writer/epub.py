@@ -1,3 +1,7 @@
+from bs4 import BeautifulSoup
+from uuid import uuid4
+from epub_writer import TEMPLATES as t
+
 
 class EPuB:
     '''
@@ -16,12 +20,58 @@ class EPuB:
             * publisher
             * cover
 
-        Content is a list of Strings
+        Content is a list of dictionaries
+            * title 
+            * html
+
         '''
-        pass
+
+        self.title = metadata.get('title', '')
+        self.author = metadata.get('author', '')
+        self.publisher = metadata.get('publisher', '')
+        self.cover = metadata.get('cover', '')
+
+
+        self.images = []
+        self.chapters = []
+        for item in content:
+            #some parsing has to be done; we need to make sure all images are 
+            #downloaded
+            soup = BeautifulSoup(item.get('html', ''), 'html.parser')
+            for img in soup.find_all('img'):
+                src = img['src']
+                image = Image(src)
+                img['src'] = image.new_src()
+                self.images.append(image)
+
+            #then we just stick it in the mako template
+            html_string = t.PAGE.render(title=item.get('title', ''), body=soup.prettify()) 
+
+            chapter = Chapter(html_string)
+            self.chapters.append(chapter)
 
     def compile(self, tmp_dir, output_dir):
         pass
+
+class Chapter:
+    '''
+    Represents a chapter in the epub
+    Has an HTML string, and a UUID
+    UUID represents final path
+    '''
+
+    def __init__(self, HTML):
+        self.HTML = HTML
+        self.UUID = str(uuid4())
+    
+    def filepath(self):
+        return f'../'
+    
+    def __str__(self):
+        return f'...{self.HTML[:20]}... | {self.UUID}'
+    
+    def __repr__(self):
+        return str(self)
 
 class Image:
     '''
@@ -35,4 +85,14 @@ class Image:
     '''
 
     def __init__(self, URL):
-        pass
+        self.src = URL
+        self.UUID = str(uuid4())
+
+    def new_src(self):
+        return f'../Images/{self.UUID}.png'
+    
+    def __str__(self):
+        return f'{self.new_src()} | {self.src}'
+    
+    def __repr__(self):
+        return str(self)
