@@ -134,10 +134,7 @@ class EPuB:
                 title=self.title,
                 chapters=self.chapters
             ))
-
-        with open(str(META / 'container.xml'), 'w') as f:
-            f.write(t.CONTAINER)
-        
+ 
         with open(str(TEXT / 'cover.xhtml'), 'w') as f:
             f.write(t.COVER)
 
@@ -159,8 +156,24 @@ class EPuB:
 
         result_file = output_dir / (self.filename + '.epub')
 
-        shutil.make_archive(str(result_file), 'zip', str(full_dir))
-        os.rename(str(result_file) + '.zip', str(result_file))
+        #can't just zip up the directory, because mimetype MUST be first
+        #THEN META-INF
+        def write_dir(path, zip, arcpath):
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    zip.write(os.path.join(root, file), arcname=os.path.join(arcpath, file))
+
+
+        with zipfile.ZipFile(str(result_file), 'w', zipfile.ZIP_STORED) as zipf:
+            zipf.writestr("mimetype", t.MIMETYPE)
+            zipf.writestr("META-INF/container.xml", t.CONTAINER)
+            zipf.write(OEBPS / 'content.opf', arcname="OEBPS/content.opf")
+            zipf.write(OEBPS / 'toc.ncx', arcname="OEBPS/toc.ncx")
+
+            write_dir(IMAGES, zipf, "OEBPS/Images/")
+            write_dir(TEXT, zipf, "OEBPS/Text/")
+
+        #shutil.make_archive(str(result_file), 'zip', str(full_dir))
 
         shutil.rmtree(full_dir)
         

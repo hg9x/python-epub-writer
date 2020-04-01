@@ -1,27 +1,25 @@
 from mako.template import Template
 
-COVER = """
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+COVER = """<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Cover</title>
     <style type="text/css"> img { max-width: 100%; } </style>
   </head>
   <body>
-      <img src="../Images/Cover.png"/>
+      <img src="../Images/Cover.png" alt="cover"/>
   </body>
 </html>
 """
 
-PAGE_RAW = """
-<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+PAGE_RAW = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
             <title>${title}</title>
     </head>
     <body>
-        <h3 align="right">${title}</h3>
+        <h3>${title}</h3>
         ${body}
     </body>
 </html>
@@ -30,30 +28,26 @@ PAGE_RAW = """
 PAGE = Template(PAGE_RAW)
 
 
-CONTENT_OPF_RAW = """
-<?xml version='1.0' encoding='utf-8'?>
+CONTENT_OPF_RAW = """<?xml version='1.0' encoding='utf-8'?>
 <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="en">
    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
         <dc:title>${title}</dc:title> 
 
         <dc:creator id="creator01">${author}</dc:creator>
-        <meta property="role" scheme="marc:relators" refines="#creator01">aut</meta>
-
         <dc:language>en</dc:language>
 
-            % if publisher:
-            <dc:publisher>${publisher}</dc:publisher>
-            % endif
+        <meta property="dcterms:modified">2020-03-17T16:39:09Z</meta>
 
-            % if date:
-            <dc:date>2020-03-17</dc:date>
-            % endif
+        % if publisher:
+        <dc:publisher>${publisher}</dc:publisher>
+        % endif
 
-            % if UUID:
-            <dc:identifier id="pub-id">fdb841d0-d833-412d-abde-c981c7ffb576</dc:identifier>
-            % endif
+        % if date:
+        <dc:date>2020-03-17</dc:date>
+        % endif
 
-            <meta name="cover" content="Cover.jpg"/>
+        <dc:identifier id="pub-id">${UUID}</dc:identifier>
+        <meta name="cover" content="Cover.jpg"/>
     </metadata>
     <manifest>
         <item id="cover" href="Text/cover.xhtml" media-type="application/xhtml+xml"/>
@@ -78,8 +72,7 @@ CONTENT_OPF_RAW = """
 
 CONTENT_OPF = Template(CONTENT_OPF_RAW)
 
-TOC_RAW = """
-<?xml version="1.0" encoding="utf-8" ?>
+TOC_RAW = """<?xml version="1.0" encoding="utf-8" ?>
 <ncx version="2005-1" xmlns="http://www.daisy.org/z3986/2005/ncx/">
   <head>
     <meta content="${UUID}" name="dtb:uid"/>
@@ -108,12 +101,12 @@ TOC_RAW = """
     </navPoint>
     % endfor
   </navMap>
+</ncx>
 """
 
 TOC = Template(TOC_RAW)
 
-TOC_XHTML_RAW = """
-<?xml version="1.0" encoding="utf-8"?>
+TOC_XHTML_RAW = """<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
@@ -135,8 +128,7 @@ TOC_XHTML_RAW = """
 
 MIMETYPE = "application/epub+zip"
 
-CONTAINER = """
-<?xml version="1.0" encoding="UTF-8"?>
+CONTAINER = """<?xml version="1.0" encoding="UTF-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
     <rootfiles>
         <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
