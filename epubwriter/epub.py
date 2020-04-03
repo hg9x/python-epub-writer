@@ -40,6 +40,7 @@ class EPuB:
         self.publisher = metadata.get('publisher', '')
         self.cover = metadata.get('cover', '')
         self.filename = metadata.get('filename', '')
+
         if not self.filename:
             self.filename = self.title
             if not self.title:
@@ -49,6 +50,15 @@ class EPuB:
 
         self.images = []
         self.chapters = []
+
+        if self.cover:
+            self.cover_img = Image(self.cover)
+            self.cover_img.UUID = "Cover"
+            self.images.append(self.cover_img)
+        else:
+            self.cover_img = Image("Cover.png")
+            self.cover_img.UUID = "Cover"
+
         for item in content:
             #some parsing has to be done; we need to make sure all images are 
             #downloaded
@@ -126,6 +136,7 @@ class EPuB:
                 title=self.title,
                 author=self.author,
                 time="2020-03-17T16:39:09Z",
+                cover=self.cover_img,
                 UUID=self.UUID,
                 epub_elements=self.chapters + self.images,
                 chapters=self.chapters
@@ -139,7 +150,7 @@ class EPuB:
             ))
  
         with open(str(TEXT / 'cover.xhtml'), 'w') as f:
-            f.write(t.COVER)
+            f.write(t.COVER.render(cover=self.cover_img))
         
         with open(TEXT / 'toc.xhtml', 'w') as f:
             f.write(t.TOC_XHTML.render(
@@ -148,12 +159,7 @@ class EPuB:
             ))
 
         #is there a cover? In that case, we make a special Image object for it
-        if self.cover:
-            cover_image = Image(self.cover)
-            cover_image.UUID = 'Cover'
-
-            self.images.append(cover_image)
-        else:
+        if not self.cover:
             with open(str(IMAGES / 'Cover.png'), 'wb') as f:
                 cover = base64.b64decode(t.DEFAULT_COVER_IMAGE)
                 f.write(cover)

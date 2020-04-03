@@ -1,1 +1,1 @@
-from epub_writer.epub import EPuB
+from epubwriter.epub import EPuB

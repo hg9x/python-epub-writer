@@ -1,16 +1,16 @@
 from mako.template import Template
 
-COVER = """<!DOCTYPE html>
+COVER = Template("""<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <title>Cover</title>
     <style type="text/css"> img { max-width: 100%; } </style>
   </head>
   <body>
-      <img src="../Images/Cover.png" alt="cover"/>
+      <img src="${cover.new_src()}" alt="cover"/>
   </body>
 </html>
-"""
+""")
 
 PAGE_RAW = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE html>
@@ -50,7 +50,7 @@ CONTENT_OPF_RAW = """<?xml version='1.0' encoding='utf-8'?>
     </metadata>
     <manifest>
         <item id="cover" href="Text/cover.xhtml" media-type="application/xhtml+xml"/>
-        <item id="Coverimg" href="Images/Cover.png" media-type="image/png"/>
+        <item id="Coverimg" href="${cover.href}" media-type="${cover.media}"/>
         <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
         <item id="toc" href="Text/toc.xhtml" media-type="application/xhtml+xml" properties="nav"/>
 
