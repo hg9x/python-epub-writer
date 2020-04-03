@@ -35,8 +35,7 @@ CONTENT_OPF_RAW = """<?xml version='1.0' encoding='utf-8'?>
 
         <dc:creator id="creator01">${author}</dc:creator>
         <dc:language>en</dc:language>
-
-        <meta property="dcterms:modified">2020-03-17T16:39:09Z</meta>
+        <meta property="dcterms:modified">${time}</meta>
 
         % if publisher:
         <dc:publisher>${publisher}</dc:publisher>
@@ -51,7 +50,7 @@ CONTENT_OPF_RAW = """<?xml version='1.0' encoding='utf-8'?>
     </metadata>
     <manifest>
         <item id="cover" href="Text/cover.xhtml" media-type="application/xhtml+xml"/>
-        <item id="Coverimg" href="Images/Cover.png" media-type="images/png"/>
+        <item id="Coverimg" href="Images/Cover.png" media-type="image/png"/>
         <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
         <item id="toc" href="Text/toc.xhtml" media-type="application/xhtml+xml" properties="nav"/>
 
@@ -113,7 +112,6 @@ TOC_XHTML_RAW = """<?xml version="1.0" encoding="utf-8"?>
 <head>
   <meta content="text/html; charset=UTF-8" http-equiv="default-style"/>
   <title>${title}</title>
-  <link href="../Styles/stylesheet.css" rel="stylesheet" type="text/css"/>
 </head>
 
 <body>
@@ -123,8 +121,15 @@ TOC_XHTML_RAW = """<?xml version="1.0" encoding="utf-8"?>
     <li class="toc-front"><a href="../Text/cover.xhtml">Cover</a></li>
     % for chapter in chapters:
     <li class="toc-front"><a href="${chapter.new_src()}">${chapter.title}</a></li>
+    % endfor
+  </ol>
+  </nav>
+</body>
+</html>
 
 """
+
+TOC_XHTML = Template(TOC_XHTML_RAW)
 
 MIMETYPE = "application/epub+zip"
 

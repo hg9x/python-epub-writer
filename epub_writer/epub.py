@@ -3,12 +3,13 @@ from uuid import uuid4
 from pathlib import Path
 import shutil
 from epub_writer import TEMPLATES as t
+from epub_writer.utils import genid
+from datetime import datetime
+import mimetypes
 import shutil
-import aiofiles
-import aiohttp
-import asyncio
 import os
 import zipfile
+import requests
 import base64
 
 class EPuB:
@@ -43,7 +44,7 @@ class EPuB:
             self.filename = self.title
             if not self.title:
                 self.filename = "untitled"
-        self.UUID = str(uuid4())
+        self.UUID = genid()
 
 
         self.images = []
@@ -66,22 +67,22 @@ class EPuB:
 
         
     #TODO: Error checking for both
-    async def write_chapters(self, tmp_dir):
+    def write_chapters(self, tmp_dir):
         for chapter in self.chapters:
             full_dir = tmp_dir / chapter.filepath()
-            async with aiofiles.open(str(full_dir), 'w') as f:
-                await f.write(chapter.HTML)
+            with open(str(full_dir), 'w') as f:
+                f.write(chapter.HTML)
     
-    async def write_images(self, tmp_dir):
-        async with aiohttp.ClientSession() as session:
-            for image in self.images:
-                full_dir = tmp_dir / image.filepath()
-                async with session.get(image.src) as resp:
-                    if resp.status == 200:
-                        async with aiofiles.open(str(full_dir), 'wb') as f:
-                            await f.write(await resp.read())
-    
-    async def async_compile(self, tmp_dir, output_dir):
+    def write_images(self, tmp_dir):
+        for image in self.images:
+            r = requests.get(image.src, stream=True)
+            if r.status_code == 200:
+                with open(tmp_dir / image.filepath(), 'wb') as f:
+                    for chunk in r:
+                        f.write(chunk)
+   
+    def compile(self, tmp_dir, output_dir):
+        
         #first, make the file structure for the temp directory
         full_dir = tmp_dir / 'tmp'
         if full_dir.exists():
@@ -113,6 +114,7 @@ class EPuB:
         IMAGES.mkdir()
 
         #with the cool folders and shit, we can now start writing files
+        time = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
         #MIMETYPE
         with open(str(full_dir / 'mimetype'), 'w') as f:
@@ -123,6 +125,7 @@ class EPuB:
             f.write(t.CONTENT_OPF.render(
                 title=self.title,
                 author=self.author,
+                time="2020-03-17T16:39:09Z",
                 UUID=self.UUID,
                 epub_elements=self.chapters + self.images,
                 chapters=self.chapters
@@ -137,6 +140,12 @@ class EPuB:
  
         with open(str(TEXT / 'cover.xhtml'), 'w') as f:
             f.write(t.COVER)
+        
+        with open(TEXT / 'toc.xhtml', 'w') as f:
+            f.write(t.TOC_XHTML.render(
+                title=self.title,
+                chapters=self.chapters
+            ))
 
         #is there a cover? In that case, we make a special Image object for it
         if self.cover:
@@ -150,9 +159,9 @@ class EPuB:
                 f.write(cover)
 
         #chapter xhtml files
-        await self.write_chapters(full_dir)
+        self.write_chapters(full_dir)
 
-        await self.write_images(full_dir) 
+        self.write_images(full_dir) 
 
         result_file = output_dir / (self.filename + '.epub')
 
@@ -176,11 +185,7 @@ class EPuB:
         #shutil.make_archive(str(result_file), 'zip', str(full_dir))
 
         shutil.rmtree(full_dir)
-        
 
-
-    def compile(self, tmp_dir, output_dir):
-        asyncio.run(self.async_compile(tmp_dir, output_dir))
 
 class EPuBItem:
 
@@ -198,7 +203,7 @@ class Chapter(EPuBItem):
 
     def __init__(self, HTML, title = ''):
         self.HTML = HTML
-        self.UUID = str(uuid4())
+        self.UUID = genid()
         self.title = title
         super().__init__(self.UUID, f'Text/{self.UUID}.xhtml', 'application/xhtml+xml')
     
@@ -207,7 +212,7 @@ class Chapter(EPuBItem):
     
     def filepath(self):
         return Path('OEBPS/Text') / Path(f'{self.UUID}.xhtml')
-
+    
     def __str__(self):
         return f'...{self.HTML[:20]}... | {self.UUID}'
     
@@ -227,14 +232,19 @@ class Image(EPuBItem):
 
     def __init__(self, URL):
         self.src = URL
-        self.UUID = str(uuid4())
-        super().__init__(self.UUID, f'Images/{self.UUID}.png', 'image/png')
+        self.UUID = genid()
+
+        self.type = mimetypes.guess_type(self.src)[0]
+        if not self.type:
+            self.type = "image/png"
+        self.extension = self.type.split('/')[1]
+        super().__init__(self.UUID, f'Images/{self.UUID}.{self.extension}', self.type)
 
     def new_src(self):
-        return f'../Images/{self.UUID}.png'
+        return f'../Images/{self.UUID}.{self.extension}'
     
     def filepath(self):
-        return Path('OEBPS/Images') / Path(f'{self.UUID}.png')
+        return Path('OEBPS/Images') / Path(f'{self.UUID}.{self.extension}')
     
     def __str__(self):
         return f'{self.new_src()} | {self.src}'
