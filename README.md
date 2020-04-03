@@ -53,5 +53,9 @@ The `compile` method takes in two inputs
 
 It is mostly important that the application has write permissions to whatever directories you supply.
 
+# Dependencies
 
+* beautifulsoup4
+* mako
+* requests
 
