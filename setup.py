@@ -15,8 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         "beautifulsoup4",
-        "aiofiles",
-        "aiohttp"
+        "requests"
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
