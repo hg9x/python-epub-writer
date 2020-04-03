@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="python-epub-writer",
-    version="0.0.1",
+    version="0.0.2",
     author="Starr Yang",
     author_email="starryangt@gmail.com",
     description="Package for writing epubs",
@@ -13,6 +13,11 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/starryangt/python-epub-writer",
     packages=setuptools.find_packages(),
+    install_requires=[
+        "beautifulsoup4",
+        "aiofiles",
+        "aiohttp"
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
