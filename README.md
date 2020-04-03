@@ -4,7 +4,7 @@ Generates valid EPuB 3.0 files with Python 3.
 
 # Usage
 
-```
+```python
 from epubwriter import EPuB
 
 metadata = {
@@ -25,7 +25,7 @@ current_dir = Path.cwd()
 
 epub.compile(current_dir, current_dir)
 
-```python
+```
 
 The EPuB class takes in two parameters: metadata, and contents
 
